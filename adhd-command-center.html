@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ADHD Command Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: #2a2a3d;
+    --accent: #7b5ea7;
+    --accent2: #e8c547;
+    --accent3: #4ecdc4;
+    --danger: #ff6b6b;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --green: #51cf66;
+    --font-display: 'Syne', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font-display); min-height:100vh; overflow-x:hidden; }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image: linear-gradient(rgba(123,94,167,0.03) 1px,transparent 1px), linear-gradient(90deg,rgba(123,94,167,0.03) 1px,transparent 1px);
+    background-size:40px 40px; pointer-events:none; z-index:0;
+  }
+  .app { position:relative; z-index:1; max-width:900px; margin:0 auto; padding:24px 16px; }
+
+  /* HEADER */
+  .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--border); }
+  .logo-block h1 { font-size:22px; font-weight:800; letter-spacing:-0.5px; }
+  .logo-block h1 span { color:var(--accent2); }
+  .logo-block p { font-size:11px; color:var(--muted); font-family:var(--font-mono); margin-top:2px; letter-spacing:1px; text-transform:uppercase; }
+  .date-block { text-align:right; font-family:var(--font-mono); font-size:11px; color:var(--muted); }
+  .date-block .time { font-size:24px; color:var(--accent2); font-weight:700; display:block; line-height:1; margin-bottom:4px; }
+
+  /* TABS */
+  .tabs { display:flex; gap:4px; margin-bottom:24px; border-bottom:1px solid var(--border); }
+  .tab { padding:8px 16px; font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all 0.15s; }
+  .tab.active { color:var(--accent2); border-bottom-color:var(--accent2); }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+
+  /* ONBOARDING */
+  .onboard-card { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent2); border-radius:10px; padding:20px; margin-bottom:20px; }
+  .onboard-card h3 { font-size:14px; font-weight:700; color:var(--accent2); margin-bottom:12px; }
+  .onboard-steps { list-style:none; }
+  .onboard-steps li { font-size:13px; color:#a0a0b8; line-height:1.6; padding:6px 0; border-bottom:1px solid var(--border); display:flex; gap:12px; align-items:flex-start; }
+  .onboard-steps li:last-child { border-bottom:none; }
+  .step-num { background:var(--accent); color:white; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-size:10px; font-family:var(--font-mono); flex-shrink:0; margin-top:2px; }
+  .onboard-steps a { color:var(--accent2); text-decoration:none; }
+  .dismiss-btn { background:none; border:1px solid var(--border); border-radius:6px; padding:6px 14px; color:var(--muted); font-family:var(--font-mono); font-size:10px; cursor:pointer; margin-top:14px; }
+  .dismiss-btn:hover { color:var(--text); border-color:var(--accent); }
+
+  /* API KEY */
+  .api-banner { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent2); border-radius:8px; padding:12px 16px; margin-bottom:20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .api-banner label { font-size:11px; font-family:var(--font-mono); color:var(--muted); text-transform:uppercase; letter-spacing:1px; white-space:nowrap; }
+  .api-banner input { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:8px 12px; color:var(--text); font-family:var(--font-mono); font-size:12px; outline:none; min-width:180px; }
+  .api-banner input:focus { border-color:var(--accent); }
+  .btn-save { background:var(--accent); color:white; border:none; border-radius:6px; padding:8px 16px; font-family:var(--font-mono); font-size:11px; cursor:pointer; white-space:nowrap; transition:opacity 0.2s; }
+  .btn-save:hover { opacity:0.85; }
+  .api-status { font-family:var(--font-mono); font-size:10px; padding:3px 8px; border-radius:4px; white-space:nowrap; }
+  .api-status.ok { background:rgba(81,207,102,0.15); color:var(--green); }
+  .api-status.missing { background:rgba(255,107,107,0.15); color:var(--danger); }
+
+  /* SECTION LABEL */
+  .section-label { font-family:var(--font-mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:2px; margin-bottom:10px; }
+
+  /* ENERGY */
+  .energy-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:20px; }
+  .energy-btn { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 8px; text-align:center; cursor:pointer; transition:all 0.15s; }
+  .energy-btn:hover { border-color:var(--accent); transform:translateY(-1px); }
+  .energy-btn.active { border-color:var(--accent2); background:rgba(232,197,71,0.08); }
+  .energy-btn .emoji { font-size:22px; display:block; margin-bottom:4px; }
+  .energy-btn .label { font-size:10px; color:var(--muted); font-family:var(--font-mono); }
+  .energy-btn.active .label { color:var(--accent2); }
+
+  /* INPUTS */
+  .input-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  @media(max-width:580px){ .input-grid { grid-template-columns:1fr; } }
+  .input-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; }
+  .input-card label { font-family:var(--font-mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; display:block; margin-bottom:8px; }
+  .input-card textarea { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:10px 12px; color:var(--text); font-family:var(--font-display); font-size:13px; resize:vertical; outline:none; min-height:90px; line-height:1.5; }
+  .input-card textarea:focus { border-color:var(--accent); }
+  .input-card textarea::placeholder { color:var(--muted); font-size:12px; }
+
+  /* CHIPS */
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:20px; }
+  .chip { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:5px 12px; font-size:11px; font-family:var(--font-mono); color:var(--muted); cursor:pointer; transition:all 0.15s; user-select:none; }
+  .chip:hover, .chip.active { border-color:var(--accent3); color:var(--accent3); background:rgba(78,205,196,0.08); }
+
+  /* BUTTONS */
+  .btn-generate { width:100%; background:linear-gradient(135deg,var(--accent),#9b7ed4); border:none; border-radius:10px; padding:16px; color:white; font-family:var(--font-display); font-size:15px; font-weight:600; cursor:pointer; margin-bottom:12px; position:relative; overflow:hidden; transition:opacity 0.2s,transform 0.1s; }
+  .btn-generate:hover { opacity:0.92; transform:translateY(-1px); }
+  .btn-generate:active { transform:translateY(0); }
+  .btn-generate:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+  .btn-generate .pulse { position:absolute; inset:0; background:rgba(255,255,255,0.1); animation:pulse 1.5s infinite; display:none; }
+  .btn-generate.loading .pulse { display:block; }
+  @keyframes pulse { 0%,100%{opacity:0} 50%{opacity:1} }
+
+  .btn-derail { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px; color:var(--muted); font-family:var(--font-mono); font-size:11px; cursor:pointer; margin-bottom:20px; transition:all 0.15s; text-transform:uppercase; letter-spacing:1px; display:none; }
+  .btn-derail:hover { border-color:var(--danger); color:var(--danger); }
+  .btn-derail.visible { display:block; }
+
+  /* OUTPUT */
+  .output-wrap { display:none; animation:slideUp 0.3s ease; }
+  .output-wrap.visible { display:block; }
+  @keyframes slideUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  .output-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .output-header h2 { font-size:13px; font-weight:600; color:var(--accent2); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:2px; }
+  .btn-copy { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:5px 12px; color:var(--muted); font-family:var(--font-mono); font-size:10px; cursor:pointer; transition:all 0.15s; }
+  .btn-copy:hover { color:var(--text); border-color:var(--accent); }
+
+  /* PLAN BLOCKS */
+  .plan-block { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:12px; position:relative; overflow:hidden; }
+  .plan-block::before { content:''; position:absolute; left:0;top:0;bottom:0; width:3px; }
+  .plan-block.focus::before { background:var(--accent2); }
+  .plan-block.break::before { background:var(--accent3); }
+  .plan-block.admin::before { background:var(--accent); }
+  .plan-block.body::before { background:var(--green); }
+  .plan-block.wind::before { background:var(--muted); }
+  .plan-block.greeting::before { background:var(--accent2); }
+  .block-header { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .block-tag { font-family:var(--font-mono); font-size:9px; text-transform:uppercase; letter-spacing:1.5px; padding:2px 8px; border-radius:4px; }
+  .focus .block-tag { background:rgba(232,197,71,0.15); color:var(--accent2); }
+  .break .block-tag { background:rgba(78,205,196,0.15); color:var(--accent3); }
+  .admin .block-tag { background:rgba(123,94,167,0.15); color:#b39ddb; }
+  .body .block-tag { background:rgba(81,207,102,0.15); color:var(--green); }
+  .wind .block-tag { background:rgba(107,107,138,0.15); color:var(--muted); }
+  .block-time { font-family:var(--font-mono); font-size:11px; color:var(--muted); margin-left:auto; }
+  .block-title { font-size:14px; font-weight:600; color:var(--text); margin-bottom:8px; }
+
+  /* TASK CHECKLIST */
+  .task-list { list-style:none; padding:0; }
+  .task-item { display:flex; align-items:flex-start; gap:10px; padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; }
+  .task-item:last-child { border-bottom:none; }
+  .task-check { width:16px; height:16px; border:1px solid var(--border); border-radius:4px; flex-shrink:0; margin-top:2px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+  .task-item.done .task-check { background:var(--green); border-color:var(--green); }
+  .task-item.done .task-check::after { content:'✓'; font-size:10px; color:white; }
+  .task-item.done .task-text { text-decoration:line-through; color:var(--muted); }
+  .task-text { font-size:12px; color:#a0a0b8; line-height:1.6; }
+
+  /* DERAIL RESET OUTPUT */
+  .reset-block { background:rgba(255,107,107,0.06); border:1px solid rgba(255,107,107,0.2); border-radius:10px; padding:16px; margin-bottom:12px; }
+  .reset-block .block-title { color:var(--danger); }
+
+  /* AFFIRMATION */
+  .affirmation { background:linear-gradient(135deg,rgba(123,94,167,0.12),rgba(78,205,196,0.06)); border:1px solid rgba(123,94,167,0.2); border-radius:10px; padding:16px 20px; margin-top:16px; font-size:14px; color:var(--text); line-height:1.6; font-style:italic; text-align:center; }
+  .affirmation::before { content:'✦  '; color:var(--accent2); font-style:normal; }
+  .affirmation::after { content:'  ✦'; color:var(--accent2); font-style:normal; }
+
+  /* CACHE BANNER */
+  .cache-banner { background:rgba(78,205,196,0.08); border:1px solid rgba(78,205,196,0.2); border-radius:8px; padding:10px 16px; margin-bottom:16px; display:none; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  .cache-banner.show { display:flex; }
+  .cache-banner span { font-family:var(--font-mono); font-size:11px; color:var(--accent3); }
+  .cache-banner button { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:4px 12px; color:var(--text); font-family:var(--font-mono); font-size:10px; cursor:pointer; }
+
+  /* HISTORY TAB */
+  .history-item { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:12px; cursor:pointer; transition:border-color 0.15s; }
+  .history-item:hover { border-color:var(--accent); }
+  .history-date { font-family:var(--font-mono); font-size:11px; color:var(--accent2); margin-bottom:6px; }
+  .history-preview { font-size:12px; color:var(--muted); line-height:1.5; }
+  .history-detail { display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+  .history-item.open .history-detail { display:block; }
+  .empty-state { text-align:center; padding:40px 20px; color:var(--muted); font-family:var(--font-mono); font-size:12px; }
+
+  /* SKELETON */
+  .skeleton { background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:8px; height:80px; margin-bottom:12px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  /* FOOTER */
+  .footer { margin-top:32px; padding-top:16px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  .footer p { font-family:var(--font-mono); font-size:10px; color:var(--muted); }
+  .footer a { color:var(--accent2); text-decoration:none; }
+
+  .raw-output { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px; font-size:13px; line-height:1.7; color:var(--text); white-space:pre-wrap; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-block">
+      <h1>ADHD <span>Command</span> Center</h1>
+      <p>Sin Studio · BYOK · Groq AI</p>
+    </div>
+    <div class="date-block">
+      <span class="time" id="clock">--:--</span>
+      <span id="datestr">...</span>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('plan')">Today</div>
+    <div class="tab" onclick="switchTab('history')">History</div>
+    <div class="tab" onclick="switchTab('setup')">Setup</div>
+  </div>
+
+  <!-- ── PLAN TAB ── -->
+  <div id="tab-plan" class="tab-panel active">
+
+    <!-- API KEY -->
+    <div class="api-banner">
+      <label>Groq Key</label>
+      <input type="password" id="apiKey" placeholder="gsk_..." autocomplete="off" />
+      <button class="btn-save" onclick="saveKey()">Save</button>
+      <span class="api-status missing" id="apiStatus">No key</span>
+    </div>
+
+    <!-- CACHE BANNER -->
+    <div class="cache-banner" id="cacheBanner">
+      <span>✓ Today's plan loaded from cache</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Want a fresh one?</span>
+        <button onclick="clearCache()">Regenerate</button>
+      </div>
+    </div>
+
+    <!-- ENERGY -->
+    <div class="section-label">Current Energy Level</div>
+    <div class="energy-grid">
+      <div class="energy-btn" onclick="selectEnergy(this,'crashed')" data-val="crashed"><span class="emoji">💀</span><span class="label">Crashed</span></div>
+      <div class="energy-btn" onclick="selectEnergy(this,'low')" data-val="low"><span class="emoji">🐢</span><span class="label">Low</span></div>
+      <div class="energy-btn active" onclick="selectEnergy(this,'medium')" data-val="medium"><span class="emoji">🌤</span><span class="label">Medium</span></div>
+      <div class="energy-btn" onclick="selectEnergy(this,'high')" data-val="high"><span class="emoji">⚡</span><span class="label">High</span></div>
+      <div class="energy-btn" onclick="selectEnergy(this,'hyperfocus')" data-val="hyperfocus"><span class="emoji">🔥</span><span class="label">Hyper</span></div>
+    </div>
+
+    <!-- TASKS + BLOCKERS -->
+    <div class="input-grid">
+      <div class="input-card">
+        <label>Tasks / Brain Dump</label>
+        <textarea id="tasks" placeholder="List tasks, goals, anything on your mind. No format required."></textarea>
+      </div>
+      <div class="input-card">
+        <label>What's Blocking You?</label>
+        <textarea id="blockers" placeholder="Overwhelmed? Don't know where to start? Anxious about something?"></textarea>
+      </div>
+    </div>
+
+    <!-- CHIPS -->
+    <div class="section-label">Extra Context (tap to add)</div>
+    <div class="chips" id="chips">
+      <div class="chip" onclick="toggleChip(this)" data-val="working from home">🏠 Home</div>
+      <div class="chip" onclick="toggleChip(this)" data-val="haven't eaten yet">🍽 No food yet</div>
+      <div class="chip" onclick="toggleChip(this)" data-val="took medication">💊 Medicated</div>
+      <div class="chip" onclick="toggleChip(this)" data-val="low sleep">😴 Low sleep</div>
+      <div class="chip" onclick="toggleChip(this)" data-val="anxious today">😬 Anxious</div>
+      <div class="chip" onclick="toggleChip(this)" data-val="need to move body">🏃 Need to move</div>
+      <div class="chip" onclick="toggleChip(this)" data-val="deadline pressure">⏰ Deadline</div>
+      <div class="chip" onclick="toggleChip(this)" data-val="creative mode">🎨 Creative mode</div>
+    </div>
+
+    <!-- GENERATE -->
+    <button class="btn-generate" id="genBtn" onclick="generatePlan()">
+      <div class="pulse"></div>
+      ⚡ Generate My Day Plan
+    </button>
+
+    <!-- DERAILED BUTTON -->
+    <button class="btn-derail" id="derailBtn" onclick="generateReset()">
+      🚨 I got derailed — reset my focus
+    </button>
+
+    <!-- OUTPUT -->
+    <div class="output-wrap" id="outputWrap">
+      <div class="output-header">
+        <h2>Your Plan</h2>
+        <button class="btn-copy" onclick="copyPlan()">Copy All</button>
+      </div>
+      <div id="planOutput"></div>
+    </div>
+
+  </div><!-- /tab-plan -->
+
+  <!-- ── HISTORY TAB ── -->
+  <div id="tab-history" class="tab-panel">
+    <div id="historyList"></div>
+  </div>
+
+  <!-- ── SETUP TAB ── -->
+  <div id="tab-setup" class="tab-panel">
+    <div class="onboard-card">
+      <h3>⚡ Quick Setup (3 steps)</h3>
+      <ol class="onboard-steps">
+        <li>
+          <span class="step-num">1</span>
+          <span>Get a free Groq API key at <a href="https://console.groq.com" target="_blank">console.groq.com</a> — sign up, go to API Keys, create one. It's free.</span>
+        </li>
+        <li>
+          <span class="step-num">2</span>
+          <span>Paste your key in the <strong style="color:var(--text)">Groq Key</strong> field on the Today tab and hit Save. It stays in your browser — never sent anywhere except Groq.</span>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <span>Add this file to your phone's home screen: in your browser tap Share → <em>Add to Home Screen</em>. Opens like an app, no install needed.</span>
+        </li>
+      </ol>
+    </div>
+
+    <div class="onboard-card" style="border-left-color:var(--accent3)">
+      <h3 style="color:var(--accent3)">📌 Tips</h3>
+      <ol class="onboard-steps">
+        <li><span class="step-num" style="background:var(--accent3)">→</span><span>Your plan is cached — reopen the app anytime today and it loads instantly without burning an API call.</span></li>
+        <li><span class="step-num" style="background:var(--accent3)">→</span><span>Check off tasks as you do them. Progress is saved in your browser.</span></li>
+        <li><span class="step-num" style="background:var(--accent3)">→</span><span>If you derail, hit the red reset button — it generates a refocus plan for where you are right now.</span></li>
+        <li><span class="step-num" style="background:var(--accent3)">→</span><span>Your task brain dump saves automatically so it's there next time you open.</span></li>
+      </ol>
+    </div>
+
+    <div class="onboard-card" style="border-left-color:var(--muted)">
+      <h3 style="color:var(--muted)">🔑 Privacy</h3>
+      <ol class="onboard-steps">
+        <li><span class="step-num" style="background:var(--muted)">→</span><span>Your Groq key and all plan data lives in your browser's localStorage only. This tool has no server, no account, no tracking.</span></li>
+      </ol>
+      <button class="dismiss-btn" onclick="clearAll()" style="border-color:var(--danger);color:var(--danger)">Clear All My Data</button>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p>Key never leaves your device · <a href="https://simmonstia.gumroad.com" target="_blank">More tools →</a></p>
+    <p>Sin Studio</p>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ── CLOCK ──────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('datestr').textContent = now.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
+}
+updateClock(); setInterval(updateClock, 1000);
+
+// ── TABS ───────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const panels = ['plan','history','setup'];
+    t.classList.toggle('active', panels[i] === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if (name === 'history') renderHistory();
+}
+
+// ── API KEY ────────────────────────────────────────────────
+let apiKey = localStorage.getItem('groq_key') || '';
+if (apiKey) { document.getElementById('apiKey').value = apiKey; setStatus(true); }
+
+function saveKey() {
+  apiKey = document.getElementById('apiKey').value.trim();
+  if (apiKey) { localStorage.setItem('groq_key', apiKey); setStatus(true); }
+}
+function setStatus(ok) {
+  const el = document.getElementById('apiStatus');
+  el.textContent = ok ? '✓ Ready' : 'No key';
+  el.className = 'api-status ' + (ok ? 'ok' : 'missing');
+}
+document.getElementById('apiKey').addEventListener('keydown', e => { if(e.key==='Enter') saveKey(); });
+
+// ── ENERGY ─────────────────────────────────────────────────
+let energy = localStorage.getItem('last_energy') || 'medium';
+document.querySelectorAll('.energy-btn').forEach(b => {
+  if (b.dataset.val === energy) b.classList.add('active');
+  else b.classList.remove('active');
+});
+function selectEnergy(el, val) {
+  document.querySelectorAll('.energy-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  energy = val;
+  localStorage.setItem('last_energy', val);
+}
+
+// ── CHIPS ──────────────────────────────────────────────────
+let activeChips = [];
+// Auto time-of-day chip
+(function() {
+  const h = new Date().getHours();
+  const tod = h>=5&&h<12 ? {e:'🌅',l:'Morning',v:'morning time'} : h>=12&&h<17 ? {e:'☀️',l:'Afternoon',v:'afternoon energy dip window'} : h>=17&&h<21 ? {e:'🌆',l:'Evening',v:'evening wind-down'} : {e:'🌙',l:'Night',v:'late night — rest is valid'};
+  const chip = document.createElement('div');
+  chip.className = 'chip active';
+  chip.dataset.val = tod.v;
+  chip.textContent = `${tod.e} ${tod.l}`;
+  chip.onclick = function(){ toggleChip(this); };
+  document.getElementById('chips').prepend(chip);
+  activeChips.push(tod.v);
+})();
+
+function toggleChip(el) {
+  const val = el.dataset.val;
+  el.classList.toggle('active');
+  activeChips = activeChips.includes(val) ? activeChips.filter(v=>v!==val) : [...activeChips, val];
+}
+
+// ── PERSIST TASK BRAIN DUMP ────────────────────────────────
+const tasksEl = document.getElementById('tasks');
+const blockersEl = document.getElementById('blockers');
+tasksEl.value = localStorage.getItem('saved_tasks') || '';
+blockersEl.value = localStorage.getItem('saved_blockers') || '';
+tasksEl.addEventListener('input', () => localStorage.setItem('saved_tasks', tasksEl.value));
+blockersEl.addEventListener('input', () => localStorage.setItem('saved_blockers', blockersEl.value));
+
+// ── DAILY CACHE ────────────────────────────────────────────
+const TODAY = new Date().toDateString();
+const CACHE_KEY = 'adhd_plan_cache';
+const CHECKS_KEY = 'adhd_checks_' + TODAY;
+
+function saveCache(planHTML) {
+  localStorage.setItem(CACHE_KEY, JSON.stringify({date:TODAY, html:planHTML}));
+}
+function loadCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE_KEY));
+    if (c && c.date === TODAY) return c.html;
+  } catch {}
+  return null;
+}
+function clearCache() {
+  localStorage.removeItem(CACHE_KEY);
+  localStorage.removeItem(CHECKS_KEY);
+  document.getElementById('outputWrap').classList.remove('visible');
+  document.getElementById('planOutput').innerHTML = '';
+  document.getElementById('cacheBanner').classList.remove('show');
+  document.getElementById('genBtn').textContent = '⚡ Generate My Day Plan';
+  document.getElementById('derailBtn').classList.remove('visible');
+}
+function clearAll() {
+  if (!confirm('Clear all saved data?')) return;
+  localStorage.clear();
+  location.reload();
+}
+
+// ── CHECKBOXES ─────────────────────────────────────────────
+function getChecks() {
+  try { return JSON.parse(localStorage.getItem(CHECKS_KEY)) || {}; } catch { return {}; }
+}
+function saveChecks(checks) {
+  localStorage.setItem(CHECKS_KEY, JSON.stringify(checks));
+}
+function toggleCheck(id) {
+  const checks = getChecks();
+  checks[id] = !checks[id];
+  saveChecks(checks);
+  const el = document.querySelector(`[data-check="${id}"]`);
+  if (el) el.closest('.task-item').classList.toggle('done', checks[id]);
+  // Update cache with new check state
+  saveCache(document.getElementById('planOutput').innerHTML);
+}
+function applyChecks() {
+  const checks = getChecks();
+  Object.entries(checks).forEach(([id, done]) => {
+    const el = document.querySelector(`[data-check="${id}"]`);
+    if (el && done) el.closest('.task-item').classList.add('done');
+  });
+}
+
+// ── COPY ───────────────────────────────────────────────────
+function copyPlan() {
+  const text = document.getElementById('planOutput').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy All', 1500);
+  });
+}
+
+// ── HISTORY ────────────────────────────────────────────────
+function saveHistory(planHTML) {
+  const key = 'adhd_history';
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem(key)) || []; } catch {}
+  // Remove existing entry for today
+  hist = hist.filter(h => h.date !== TODAY);
+  hist.unshift({date: TODAY, html: planHTML});
+  if (hist.length > 14) hist = hist.slice(0,14); // keep 2 weeks
+  localStorage.setItem(key, JSON.stringify(hist));
+}
+function renderHistory() {
+  const key = 'adhd_history';
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem(key)) || []; } catch {}
+  const el = document.getElementById('historyList');
+  if (!hist.length) {
+    el.innerHTML = '<div class="empty-state">No history yet.<br>Generate your first plan on the Today tab.</div>';
+    return;
+  }
+  el.innerHTML = hist.map((h,i) => `
+    <div class="history-item" onclick="this.classList.toggle('open')">
+      <div class="history-date">${h.date}</div>
+      <div class="history-preview">Tap to expand plan</div>
+      <div class="history-detail">${h.html}</div>
+    </div>
+  `).join('');
+}
+
+// ── GENERATE ───────────────────────────────────────────────
+async function generatePlan() {
+  apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) { alert('Add your Groq API key first — check the Setup tab for instructions.'); return; }
+
+  const tasks = tasksEl.value.trim();
+  const blockers = blockersEl.value.trim();
+  const context = activeChips.join(', ');
+  const btn = document.getElementById('genBtn');
+
+  btn.disabled = true;
+  btn.classList.add('loading');
+  btn.textContent = '⚡ Generating...';
+
+  const outputWrap = document.getElementById('outputWrap');
+  const planOutput = document.getElementById('planOutput');
+  outputWrap.classList.add('visible');
+  planOutput.innerHTML = '<div class="skeleton"></div><div class="skeleton" style="height:60px"></div><div class="skeleton"></div>';
+  document.getElementById('cacheBanner').classList.remove('show');
+
+  const prompt = buildPrompt({energy, tasks, blockers, context, mode:'plan'});
+
+  try {
+    const plan = await callGroq(prompt);
+    renderPlan(plan);
+    const html = planOutput.innerHTML;
+    saveCache(html);
+    saveHistory(html);
+    document.getElementById('derailBtn').classList.add('visible');
+  } catch(err) {
+    planOutput.innerHTML = `<div class="plan-block" style="border-left:3px solid var(--danger)"><div class="block-title" style="color:var(--danger)">Error</div><div class="block-body">${err.message}</div></div>`;
+  }
+
+  btn.disabled = false;
+  btn.classList.remove('loading');
+  btn.textContent = '⚡ Regenerate Plan';
+}
+
+// ── DERAIL RESET ───────────────────────────────────────────
+async function generateReset() {
+  apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) return;
+
+  const btn = document.getElementById('derailBtn');
+  btn.textContent = '🚨 Getting you back on track...';
+  btn.disabled = true;
+
+  const tasks = tasksEl.value.trim();
+  const context = activeChips.join(', ');
+  const prompt = buildPrompt({energy, tasks, blockers:'', context, mode:'reset'});
+
+  try {
+    const plan = await callGroq(prompt);
+    renderReset(plan);
+  } catch(err) {
+    alert('Error: ' + err.message);
+  }
+
+  btn.textContent = '🚨 I got derailed — reset my focus';
+  btn.disabled = false;
+}
+
+function buildPrompt({energy, tasks, blockers, context, mode}) {
+  const time = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  if (mode === 'reset') {
+    return `You are an ADHD focus reset coach. The user got derailed and needs to get back on track RIGHT NOW.
+
+Energy: ${energy}
+Original tasks: ${tasks || 'Not specified'}
+Context: ${context || 'None'}
+Current time: ${time}
+
+Return JSON ONLY, no markdown:
+{
+  "message": "one direct, compassionate sentence — acknowledge the derail without judgment",
+  "next_action": "the single most important thing to do in the next 5 minutes",
+  "steps": ["step 1", "step 2", "step 3"],
+  "affirmation": "one short grounding line"
+}`;
+  }
+
+  return `You are an ADHD daily planning coach. Build a realistic, structured day plan.
+
+Energy: ${energy}
+Tasks/goals: ${tasks || 'Not specified'}
+Blockers: ${blockers || 'None'}
+Context: ${context || 'None'}
+Current time: ${time}
+
+Return JSON ONLY, no markdown:
+{
+  "greeting": "short warm direct opener (1 sentence)",
+  "insight": "honest insight about their energy/situation (1-2 sentences)",
+  "blocks": [
+    {
+      "type": "focus|break|admin|body|wind",
+      "tag": "label e.g. Deep Work / Rest / Admin / Move / Wind Down",
+      "time": "time window e.g. 9:00–10:30 AM",
+      "title": "block title",
+      "steps": ["step 1", "step 2", "step 3"]
+    }
+  ],
+  "affirmation": "one short ADHD-affirming closing line"
+}
+
+Rules:
+- 4-7 blocks based on energy
+- crashed/low = short blocks, more breaks, gentle tasks first
+- high/hyperfocus = longer deep work, strategic order
+- Honest, not toxic-positive
+- Steps specific to their actual tasks`;
+}
+
+async function callGroq(prompt) {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method:'POST',
+    headers:{'Authorization':`Bearer ${apiKey}`,'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'llama-3.3-70b-versatile',
+      messages:[{role:'user',content:prompt}],
+      temperature:0.7,
+      max_tokens:1500
+    })
+  });
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'API error'); }
+  const data = await res.json();
+  const raw = data.choices[0].message.content.trim().replace(/```json|```/g,'').trim();
+  return JSON.parse(raw);
+}
+
+function renderPlan(plan) {
+  let html = '';
+  if (plan.greeting) {
+    html += `<div class="plan-block greeting"><div class="block-title">${plan.greeting}</div>${plan.insight?`<div class="task-text" style="margin-top:6px">${plan.insight}</div>`:''}</div>`;
+  }
+  if (plan.blocks) {
+    plan.blocks.forEach((block,bi) => {
+      const type = block.type || 'focus';
+      const steps = Array.isArray(block.steps) ? block.steps.map((s,si) => {
+        const id = `b${bi}s${si}`;
+        return `<li class="task-item" onclick="toggleCheck('${id}')" data-check="${id}"><span class="task-check"></span><span class="task-text">${s}</span></li>`;
+      }).join('') : '';
+      html += `<div class="plan-block ${type}">
+        <div class="block-header"><span class="block-tag">${block.tag||type}</span><span class="block-time">${block.time||''}</span></div>
+        <div class="block-title">${block.title}</div>
+        <ul class="task-list">${steps}</ul>
+      </div>`;
+    });
+  }
+  if (plan.affirmation) html += `<div class="affirmation">${plan.affirmation}</div>`;
+  document.getElementById('planOutput').innerHTML = html;
+  applyChecks();
+}
+
+function renderReset(plan) {
+  const planOutput = document.getElementById('planOutput');
+  const resetHTML = `<div class="reset-block">
+    <div class="block-title">🚨 Refocus</div>
+    <div class="task-text" style="margin-bottom:10px">${plan.message}</div>
+    <div style="font-family:var(--font-mono);font-size:10px;color:var(--danger);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Next 5 mins → ${plan.next_action}</div>
+    <ul class="task-list">${(plan.steps||[]).map((s,i)=>`<li class="task-item" onclick="toggleCheck('r${i}')" data-check="r${i}"><span class="task-check"></span><span class="task-text">${s}</span></li>`).join('')}</ul>
+  </div>`;
+  // Prepend reset block to existing plan
+  planOutput.innerHTML = resetHTML + planOutput.innerHTML;
+  if (plan.affirmation) planOutput.innerHTML += `<div class="affirmation">${plan.affirmation}</div>`;
+  applyChecks();
+  window.scrollTo({top:0,behavior:'smooth'});
+  saveCache(planOutput.innerHTML);
+}
+
+// ── AUTO-LOAD ON OPEN ──────────────────────────────────────
+window.addEventListener('load', () => {
+  const cached = loadCache();
+  if (cached) {
+    document.getElementById('planOutput').innerHTML = cached;
+    document.getElementById('outputWrap').classList.add('visible');
+    document.getElementById('genBtn').textContent = '⚡ Regenerate Plan';
+    document.getElementById('derailBtn').classList.add('visible');
+    document.getElementById('cacheBanner').classList.add('show');
+    applyChecks();
+    return;
+  }
+  if (apiKey) setTimeout(() => generatePlan(), 800);
+});
+</script>
+</body>
+</html>
